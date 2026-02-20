@@ -4,7 +4,7 @@ import datetime
 import json
 
 # 🔑 Put your OpenRouter key here
-OPENROUTER_KEY = "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"
+OPENROUTER_KEY = st.secrets["OPENROUTER_KEY"]
 
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
