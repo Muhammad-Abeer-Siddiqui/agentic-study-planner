@@ -26,7 +26,16 @@ def ask_ai(prompt):
     )
 
     data = response.json()
-    return data["choices"][0]["message"]["content"]
+
+    # If API returned an error, show it instead of crashing
+    if "error" in data:
+        return "API Error: " + str(data["error"])
+
+    # Normal successful response
+    if "choices" in data:
+        return data["choices"][0]["message"]["content"]
+
+    return str(data)
 
 st.set_page_config(page_title="Agentic Study Planner", layout="wide")
 st.title("🎓 Agentic AI Study Planner (100% FREE CLOUD)")
