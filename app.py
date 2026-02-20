@@ -10,7 +10,9 @@ API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 headers = {
     "Authorization": f"Bearer {OPENROUTER_KEY}",
-    "Content-Type": "application/json"
+    "Content-Type": "application/json",
+    "HTTP-Referer": "https://agentic-study-planner.streamlit.app",
+    "X-Title": "Agentic Study Planner"
 }
 
 def ask_ai(prompt):
