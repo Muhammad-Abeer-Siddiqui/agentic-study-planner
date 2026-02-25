@@ -93,7 +93,7 @@ def ask_ai(prompt):
 st.markdown(
     """
     <div style="text-align:center;">
-        <p class="big-title">🎓 Agentic Study Planner</p>
+        <p class="big-title">Study Planner</p>
         <p class="subtitle">AI that plans your study schedule and tracks progress</p>
     </div>
     """,
@@ -133,12 +133,12 @@ User: {user_prompt}
 
     # Assistant reply WITH spinner (now correctly inside the if)
     with st.chat_message("assistant"):
-        with st.spinner("Thinking... 🤔"):
+        with st.spinner("Thinking..."):
             reply = ask_ai(planner_prompt)
         st.markdown(reply)
 
     st.session_state.messages.append({"role": "assistant", "content": reply})
-    
+
 # Save plan
 if st.button("💾 Save Plan", use_container_width=True):
     with open("study_plan.json","w") as f:
