@@ -106,12 +106,6 @@ st.divider()
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-if "tasks" not in st.session_state:
-    st.session_state.tasks = []
-
-if "completed" not in st.session_state:
-    st.session_state.completed = []
-
 # Show chat history (now safe)
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
@@ -137,28 +131,14 @@ Conversation history:
 User: {user_prompt}
 """
 
-    reply = ask_ai(planner_prompt)
-
-    # Show AI reply
+    # Assistant reply WITH spinner (now correctly inside the if)
     with st.chat_message("assistant"):
+        with st.spinner("Thinking... 🤔"):
+            reply = ask_ai(planner_prompt)
         st.markdown(reply)
 
     st.session_state.messages.append({"role": "assistant", "content": reply})
-    st.session_state.tasks.append(reply)
-
-# Task tracker
-st.divider()
-st.markdown("### ✅ Progress Tracker")
-for i, task in enumerate(st.session_state.tasks):
-    done = st.checkbox(task, key=i)
-    if done and task not in st.session_state.completed:
-        st.session_state.completed.append(task)
-
-# Progress bar
-if st.session_state.tasks:
-    progress = len(st.session_state.completed)/len(st.session_state.tasks)
-    st.progress(progress)
-
+    
 # Save plan
 if st.button("💾 Save Plan", use_container_width=True):
     with open("study_plan.json","w") as f:
