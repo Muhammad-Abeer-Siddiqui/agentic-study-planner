@@ -40,7 +40,7 @@ def ask_ai(prompt):
     return str(data)
 
 st.set_page_config(page_title="Agentic Study Planner", layout="wide")
-st.title("🎓 Agentic AI Study Planner (100% FREE CLOUD)")
+st.title("🎓 Agentic AI Study Planner ")
 
 # Memory
 if "history" not in st.session_state:
