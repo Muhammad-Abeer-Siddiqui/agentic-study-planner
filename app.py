@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import datetime
 import json
+import urllib.parse
 
 st.set_page_config(
     page_title="Agentic Study Planner",
@@ -54,24 +55,34 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 🔑 Put your OpenRouter key here
-OPENROUTER_KEY = st.secrets["OPENROUTER_KEY"]
+# =========================
+# 🧰 AGENT TOOLS
+# =========================
 
-API_URL = "https://openrouter.ai/api/v1/chat/completions"
+import webbrowser
 
-headers = {
-    "Authorization": f"Bearer {OPENROUTER_KEY}",
-    "Content-Type": "application/json",
-    "HTTP-Referer": "https://agentic-study-planner.streamlit.app",
-    "X-Title": "Agentic Study Planner"
-}
+def save_note_tool(text):
+    with open("notes.txt", "a") as f:
+        f.write(text + "\n")
+    return "📝 Note saved successfully."
 
+def open_website_tool(url):
+    webbrowser.open(url)
+    return f"🌐 Opening {url}"
+
+def get_today_date_tool():
+    return f"📅 Today's date is {datetime.date.today()}"
+
+#ask_ai
 def ask_ai(prompt):
     response = requests.post(
-        API_URL,
-        headers=headers,
+        "https://api.groq.com/openai/v1/chat/completions",
+        headers={
+            "Authorization": f"Bearer {st.secrets['GROQ_API_KEY']}",
+            "Content-Type": "application/json",
+        },
         json={
-            "model": "mistralai/mistral-7b-instruct",
+            "model": "llama-3.3-70b-versatile",
             "messages": [
                 {"role": "user", "content": prompt}
             ]
@@ -80,15 +91,72 @@ def ask_ai(prompt):
 
     data = response.json()
 
-    # If API returned an error, show it instead of crashing
     if "error" in data:
         return "API Error: " + str(data["error"])
 
-    # Normal successful response
-    if "choices" in data:
-        return data["choices"][0]["message"]["content"]
+    return data["choices"][0]["message"]["content"]
 
-    return str(data)
+# 🌐 Search engines / platforms
+SEARCH_ENGINES = {
+    "youtube": "https://www.youtube.com/results?search_query={}",
+    "google": "https://www.google.com/search?q={}",
+    "twitter": "https://twitter.com/search?q={}",
+    "spotify": "https://open.spotify.com/search/{}",
+    "wikipedia": "https://en.wikipedia.org/wiki/{}"
+}
+
+# =========================
+# 🧠 AGENT DECISION LAYER
+# =========================
+
+import urllib.parse
+
+def agent_router(user_prompt, planner_prompt):
+    text = user_prompt.lower()
+
+    # 📝 Save note tool
+    if "save note" in text:
+        note = user_prompt.replace("save note", "")
+        return save_note_tool(note)
+
+    # 🔎 Universal search tool
+    if "search" in text and "on" in text:
+        try:
+            # extract query and platform
+            parts = text.split("search")[1].split("on")
+            query = parts[0].strip()
+            platform = parts[1].strip()
+
+            if platform in SEARCH_ENGINES:
+                encoded_query = urllib.parse.quote(query)
+                url = SEARCH_ENGINES[platform].format(encoded_query)
+                return open_website_tool(url)
+
+            else:
+                return f"❌ I don't know how to search on {platform} yet."
+
+        except:
+            return "❌ Try: search calculus on youtube"
+
+    # ▶ Open YouTube homepage
+    if "open youtube" in text:
+        return open_website_tool("https://youtube.com")
+
+    # 🌐 Open Google
+    if "open google" in text:
+        return open_website_tool("https://google.com")
+    
+    # ▶ Open Instagram homepage
+    if "open instagram" in text:
+        return open_website_tool("https://instagram.com")
+
+    # 📅 Date tool
+    if "what is today's date" in text:
+        return get_today_date_tool()
+
+    # 🤖 Default → AI thinking
+    return ask_ai(planner_prompt)
+
 
 st.markdown(
     """
@@ -101,7 +169,6 @@ st.markdown(
 )
 st.divider()
 
-    
 # Memory
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -116,7 +183,7 @@ today = datetime.date.today()
 user_prompt = st.chat_input("Ask me to plan your study schedule...")
 
 if user_prompt:
-    # Show user message
+    # show user message
     st.chat_message("user").markdown(user_prompt)
     st.session_state.messages.append({"role": "user", "content": user_prompt})
 
@@ -131,16 +198,32 @@ Conversation history:
 User: {user_prompt}
 """
 
-    # Assistant reply WITH spinner (now correctly inside the if)
+    # assistant reply with spinner + typing animation
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
-            reply = ask_ai(planner_prompt)
+            reply = agent_router(user_prompt, planner_prompt)
+
         st.markdown(reply)
 
     st.session_state.messages.append({"role": "assistant", "content": reply})
 
 # Save plan
-if st.button("💾 Save Plan", use_container_width=True):
-    with open("study_plan.json","w") as f:
-        json.dump(st.session_state.tasks,f)
-    st.success("Saved!")
+if st.button("💾 Save Chat", use_container_width=True):
+    with open("chat_history.json", "w") as f:
+        json.dump(st.session_state.messages, f, indent=2)
+    st.success("Chat saved!")
+
+#Load saved chat
+if st.button("📂 Load Saved Chat", use_container_width=True):
+    try:
+        with open("chat_history.json", "r") as f:
+            loaded_messages = json.load(f)
+
+        if len(loaded_messages) > 0:
+            st.session_state.messages = loaded_messages
+            st.success("Chat loaded!")
+            st.rerun()
+        else:
+            st.warning("Saved chat is empty.")
+    except FileNotFoundError:
+        st.error("No saved chat found yet.")
